@@ -81,7 +81,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class MockMvcRequestSenderImpl implements MockMvcRequestSender, MockMvcRequestAsyncConfigurer, MockMvcRequestAsyncSender {
     private static final String ATTRIBUTE_NAME_URL_TEMPLATE = "org.springframework.restdocs.urlTemplate";
     private static final String CONTENT_TYPE = "Content-Type";
-    private static final String CHARSET = "charset";
 
     private final MockMvc mockMvc;
     private final Map<String, Object> params;
@@ -153,9 +152,9 @@ class MockMvcRequestSenderImpl implements MockMvcRequestSender, MockMvcRequestAs
         return new Headers(headers);
     }
 
-    private Cookies convertCookies(javax.servlet.http.Cookie[] servletCookies) {
+    private Cookies convertCookies(jakarta.servlet.http.Cookie[] servletCookies) {
         List<Cookie> cookies = new ArrayList<>();
-        for (javax.servlet.http.Cookie servletCookie : servletCookies) {
+        for (jakarta.servlet.http.Cookie servletCookie : servletCookies) {
             Cookie.Builder cookieBuilder = new Cookie.Builder(servletCookie.getName(), servletCookie.getValue());
             if (servletCookie.getComment() != null) {
                 cookieBuilder.setComment(servletCookie.getComment());
@@ -292,13 +291,10 @@ class MockMvcRequestSenderImpl implements MockMvcRequestSender, MockMvcRequestAs
         if (multiParts.isEmpty()) {
             request = MockMvcRequestBuilders.request(method, uri, pathParams);
         } else if (method == POST || method == PUT) {
-            request = MockMvcRequestBuilders.fileUpload(uri, pathParams);
-            request.with(new RequestPostProcessor() {
-                @Override
-                public MockHttpServletRequest postProcessRequest(MockHttpServletRequest request) {
-                    request.setMethod(method.name());
-                    return request;
-                }
+            request = MockMvcRequestBuilders.multipart(uri, pathParams);
+            request.with(req -> {
+                req.setMethod(method.name());
+                return req;
             });
         } else {
             throw new IllegalArgumentException("Currently multi-part file data uploading only works for POST and PUT methods");
@@ -362,7 +358,7 @@ class MockMvcRequestSenderImpl implements MockMvcRequestSender, MockMvcRequestAs
 
         if (cookies.exist()) {
             for (Cookie cookie : cookies) {
-                javax.servlet.http.Cookie servletCookie = new javax.servlet.http.Cookie(cookie.getName(), cookie.getValue());
+                jakarta.servlet.http.Cookie servletCookie = new jakarta.servlet.http.Cookie(cookie.getName(), cookie.getValue());
                 if (cookie.hasComment()) {
                     servletCookie.setComment(cookie.getComment());
                 }
@@ -452,7 +448,7 @@ class MockMvcRequestSenderImpl implements MockMvcRequestSender, MockMvcRequestAs
             return;
         }
 
-        final RequestSpecificationImpl reqSpec = new RequestSpecificationImpl("http://localhost", RestAssured.UNDEFINED_PORT, "", new NoAuthScheme(), Collections.<Filter>emptyList(),
+        final RequestSpecificationImpl reqSpec = new RequestSpecificationImpl("http://localhost", RestAssured.UNDEFINED_PORT, "", new NoAuthScheme(), Collections.emptyList(),
                 null, true, ConfigConverter.convertToRestAssuredConfig(config), logRepository, null, true);
         logParamsAndHeaders(reqSpec, method.toString(), uri, unnamedPathParams, params, queryParams, formParams, headers, cookies);
         logRequestBody(reqSpec, requestBody, headers, (List<Object>) (List<?>) multiParts, config);
